@@ -17,7 +17,8 @@ mod share_x_objects;
 
 #[tokio::main]
 async fn main() {
-    let client_options = ClientOptions::parse(env!("mongodb")).await;
+    println!("Starting RustShareX");
+    let client_options = ClientOptions::parse(&*std::env::var("mongodb").unwrap()).await;
     let client = Client::with_options(client_options.unwrap()).unwrap();
 
     let client_filter = warp::any().map(move || client.clone());
@@ -112,7 +113,7 @@ async fn delete_image(image_id: String, delete_key: String, _client: Client) -> 
 
 async fn post_image(bytes: Bytes, auth: HeaderValue, filename: HeaderValue, content_type_header: Option<HeaderValue>, client: Client) -> Result<impl warp::Reply, warp::Rejection> {
     // Check if the upload request is authorized.
-    if auth != env!("password") {
+    if auth != std::env::var("password").unwrap() {
         return Ok(reply_error("unauthorized", warp::http::StatusCode::UNAUTHORIZED));
     }
 
@@ -129,7 +130,7 @@ async fn post_image(bytes: Bytes, auth: HeaderValue, filename: HeaderValue, cont
             .map(char::from)
             .collect();
         //Ensure that string is unique
-        if client.database(env!("mongoDatabase"))
+        if client.database(&*std::env::var("mongoDatabase").unwrap())
             .collection("mongoHeaderColl")
             .count_documents(doc! {"_id": parent_id.clone()}, None).await.unwrap() == 0 {
             break;
@@ -191,9 +192,9 @@ fn reply_error(error: &str, status: warp::http::status::StatusCode) -> WithStatu
 }
 
 async fn delete_file(id: &String, client: &Client) -> Option<(i64, i64)> {
-    let db = client.database(env!("mongoDatabase"));
-    let header_col = db.collection(env!("mongoHeaderColl"));
-    let chunk_col = db.collection(env!("mongoChunkColl"));
+    let db = client.database(&*std::env::var("mongoDatabase").unwrap());
+    let header_col = db.collection(&*std::env::var("mongoHeaderColl").unwrap());
+    let chunk_col = db.collection(&*std::env::var("mongoChunkColl").unwrap());
 
     // Delete the header document from the database
     let header_result = match header_col.delete_one(doc! {"_id": id}, None).await {
@@ -217,8 +218,8 @@ async fn delete_file(id: &String, client: &Client) -> Option<(i64, i64)> {
 }
 
 async fn get_header(id: &String, client: &Client) -> Option<share_x_objects::HeaderDoc> {
-    let db = client.database(env!("mongoDatabase"));
-    let header_col = db.collection(env!("mongoHeaderColl"));
+    let db = client.database(&*std::env::var("mongoDatabase").unwrap());
+    let header_col = db.collection(&*std::env::var("mongoHeaderColl").unwrap());
 
     // Gets the header document from the database
     let results = header_col.find_one(doc! {"_id": id}, None).await.unwrap(); //TODO: Don't unwrap this
@@ -229,8 +230,8 @@ async fn get_header(id: &String, client: &Client) -> Option<share_x_objects::Hea
 }
 
 async fn get_all_chunks(id: &String, client: &Client) -> Option<Vec<share_x_objects::ChunkDoc>> {
-    let db = client.database(env!("mongoDatabase"));
-    let chunk_col = db.collection(env!("mongoChunkColl"));
+    let db = client.database(&*std::env::var("mongoDatabase").unwrap());
+    let chunk_col = db.collection(&*std::env::var("mongoChunkColl").unwrap());
 
     let mut cursor = chunk_col.find(doc! {"parent_id": id}, None).await.unwrap(); //TODO: Don't unwrap this
     let mut documents = Vec::new();
@@ -249,8 +250,8 @@ async fn get_all_chunks(id: &String, client: &Client) -> Option<Vec<share_x_obje
 }
 
 async fn insert_header(header: &share_x_objects::HeaderDoc, client: &Client) {
-    let db = client.database(env!("mongoDatabase"));
-    let header_col = db.collection(env!("mongoHeaderColl"));
+    let db = client.database(&*std::env::var("mongoDatabase").unwrap());
+    let header_col = db.collection(&*std::env::var("mongoHeaderColl").unwrap());
 
     // Create a new header document and insert it to the Database
     header_col.insert_one(doc! {
@@ -265,8 +266,8 @@ async fn insert_header(header: &share_x_objects::HeaderDoc, client: &Client) {
 }
 
 async fn insert_all_chunks(chunks: &Vec<share_x_objects::ChunkDoc>, client: &Client) {
-    let db = client.database(env!("mongoDatabase"));
-    let chunk_col = db.collection(env!("mongoChunkColl"));
+    let db = client.database(&*std::env::var("mongoDatabase").unwrap());
+    let chunk_col = db.collection(&*std::env::var("mongoChunkColl").unwrap());
 
     // Convert ChunkDocuments to mongodb documents and insert them to the database
     let mut document_list = vec![];
