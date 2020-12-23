@@ -61,8 +61,12 @@ async fn main() {
 
 
 async fn load_image(image_id: String, _client: Client) -> Result<impl warp::Reply, warp::Rejection> {
+
+    // Filter out file extension
+    let real_id = &image_id.split(".").next().unwrap().parse().unwrap();
+
     // Get the HeaderDocument return error if none is found.
-    let header_doc = match get_header(&image_id, &_client).await {
+    let header_doc = match get_header(real_id, &_client).await {
         Some(t) => t,
         None => return Ok(warp::Reply::into_response(reply_error("not_found", warp::http::StatusCode::NOT_FOUND)))
     };
@@ -217,9 +221,9 @@ async fn get_header(id: &String, client: &Client) -> Option<share_x_objects::Hea
     let header_col = db.collection(env!("mongoHeaderColl"));
 
     // Gets the header document from the database
-    let results = header_col.find_one(doc! {"_id": id}, None).await.unwrap();
+    let results = header_col.find_one(doc! {"_id": id}, None).await.unwrap(); //TODO: Don't unwrap this
     return match results {
-        Some(t) => Some(mongodb::bson::from_document::<share_x_objects::HeaderDoc>(t).unwrap()),
+        Some(t) => Some(mongodb::bson::from_document::<share_x_objects::HeaderDoc>(t).unwrap()), //TODO: Don't unwrap this
         None => None
     };
 }
@@ -267,7 +271,7 @@ async fn insert_all_chunks(chunks: &Vec<share_x_objects::ChunkDoc>, client: &Cli
     // Convert ChunkDocuments to mongodb documents and insert them to the database
     let mut document_list = vec![];
     for x in chunks {
-        document_list.push(mongodb::bson::to_document(x).unwrap());
+        document_list.push(mongodb::bson::to_document(x).unwrap()); //TODO: Don't unwrap this
     }
     chunk_col.insert_many(document_list, None).await;
 }
