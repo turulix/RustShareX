@@ -1,5 +1,5 @@
 [package]
-name = "RustShareX"
+name = "rust_share_x"
 version = "0.1.0"
 authors = ["turulix <tigga01@online.de>"]
 edition = "2018"
